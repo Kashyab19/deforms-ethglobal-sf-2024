@@ -42,10 +42,10 @@ app.get('/api/surveys/:id', async (req, res) => {
 // Create a new survey
 app.post('/api/surveys', async (req, res) => {
   try {
-    const { title, json } = req.body;
+    const { title, json, creator_wallet_address } = req.body;
     const { rows } = await pool.query(
-      'INSERT INTO surveys (title, json) VALUES ($1, $2) RETURNING *',
-      [title, json]
+      'INSERT INTO surveys (title, json, creator_wallet_address) VALUES ($1, $2, $3) RETURNING *',
+      [title, json, creator_wallet_address]
     );
     res.status(201).json(rows[0]);
   } catch (err) {

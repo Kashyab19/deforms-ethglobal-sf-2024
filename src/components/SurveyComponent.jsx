@@ -24,6 +24,9 @@ function SurveyComponent() {
     const [nameType, setNameType] = useState(null);
     const [initialSurveyCompleted, setInitialSurveyCompleted] = useState(false);
     const [availableSurveys, setAvailableSurveys] = useState([]);
+    const [showAllSurveys, setShowAllSurveys] = useState(false);
+    const [canAnswerSurveys, setCanAnswerSurveys] = useState(false);
+    const [showCredibilityPrompt, setShowCredibilityPrompt] = useState(false);
 
     useEffect(() => {
         console.log("Authentication status:", authenticated);
@@ -32,6 +35,10 @@ function SurveyComponent() {
             handleUserAuthentication();
         }
     }, [authenticated, user]);
+
+    useEffect(() => {
+        console.log("showCredibilityPrompt:", showCredibilityPrompt);
+    }, [showCredibilityPrompt]);
 
     const handleUserAuthentication = async () => {
         if (user && user.wallet?.address) {
@@ -53,17 +60,10 @@ function SurveyComponent() {
                     setCredibilityScore(userDetails.credibility_score || 0);
                     setInitialSurveyCompleted(userDetails.initial_survey_completed || false);
 
-                    if (userDetails.credibility_score >= 10 || userDetails.initial_survey_completed) {
-                        console.log("Fetching all surveys");
-                        await fetchAllSurveys();
-                    } else {
-                        console.log("Fetching initial survey");
-                        await fetchInitialSurvey();
-                    }
+                    // Set showCredibilityPrompt based on the credibility score
+                    setShowCredibilityPrompt(userDetails.credibility_score < 15);
 
-                    if (userDetails.user_type !== 'enterprise') {
-                        await fetchAnsweredSurveys();
-                    }
+                    await fetchSurveys();
                 } else {
                     console.error('Failed to fetch or create user');
                 }
@@ -167,13 +167,24 @@ function SurveyComponent() {
         }
     };
 
-    const fetchAnsweredSurveys = async () => {
+    const fetchAnsweredSurveys = async (allSurveys) => {
         if (!user || !user.wallet?.address) {
             console.error('No user wallet address available');
             return;
         }
 
         console.log("Fetching answered surveys for wallet:", user.wallet.address);
+        const { data: userData, error: userError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('wallet_address', user.wallet.address)
+            .single();
+
+        if (userError) {
+            console.error('Error fetching user data:', userError);
+            return;
+        }
+
         const { data, error } = await supabase
             .from('user_survey_responses')
             .select('survey_id')
@@ -184,8 +195,26 @@ function SurveyComponent() {
         } else {
             console.log("Answered surveys fetched:", data);
             const answeredIds = data.map(item => item.survey_id);
-            setAnsweredSurveys(surveys.filter(survey => answeredIds.includes(survey.id)));
-            updateAvailableSurveys(surveys, answeredIds);
+            setAnsweredSurveys(allSurveys.filter(survey => answeredIds.includes(survey.id)));
+            
+            setInitialSurveyCompleted(userData.initial_survey_completed);
+            setCanAnswerSurveys(canUserAnswerSurveys(userData));
+            
+            // Always set all unanswered surveys
+            const unansweredSurveys = allSurveys.filter(survey => !answeredIds.includes(survey.id));
+            
+            console.log("Initial survey completed:", userData.initial_survey_completed);
+            console.log("Unanswered surveys:", unansweredSurveys);
+
+            if (!userData.initial_survey_completed && unansweredSurveys.length > 0) {
+                // If initial survey is not completed, show only one survey
+                setAvailableSurveys([unansweredSurveys[0]]);
+                console.log("Setting one survey:", [unansweredSurveys[0]]);
+            } else {
+                // If initial survey is completed, show all unanswered surveys
+                setAvailableSurveys(unansweredSurveys);
+                console.log("Setting all unanswered surveys:", unansweredSurveys);
+            }
         }
     };
 
@@ -200,18 +229,16 @@ function SurveyComponent() {
             if (newRNSName) {
                 await updateUserName(user.wallet.address, newRNSName, 'RNS');
                 setUserName(newRNSName);
-                setNameType('RNS');
                 await updateUserCredibility(user.wallet.address, 20);
-                await fetchAllSurveys();
             }
         } else {
             // Implement staking logic here
             console.log("User needs to stake 0.005 tRBTC");
-            // Assuming staking is successful:
-            await updateUserCredibility(user.wallet.address, 10);
-            await fetchAllSurveys();
+            await updateUserCredibility(user.wallet.address, 15);
         }
-        setShowNamePrompt(false);
+        // Check if credibility is now 15 or more
+        const updatedUserDetails = await fetchUser(user.wallet.address);
+        setShowCredibilityPrompt(updatedUserDetails.credibility_score < 15);
     };
 
     const updateUserName = async (walletAddress, name, type) => {
@@ -253,6 +280,7 @@ function SurveyComponent() {
             console.error('Error updating user credibility:', error);
         } else {
             setCredibilityScore(newScore);
+            setShowCredibilityPrompt(newScore < 15);
         }
     };
 
@@ -269,15 +297,29 @@ function SurveyComponent() {
     };
 
     const fetchSurveys = async () => {
-        const { data, error } = await supabase
-            .from('surveys')
-            .select('*');
+        let query;
+        if (isEnterprise && user && user.wallet?.address) {
+            query = supabase
+                .from('surveys')
+                .select('*')
+                .eq('creator_wallet_address', user.wallet.address);
+        } else {
+            query = supabase
+                .from('surveys')
+                .select('*');
+        }
 
+        const { data, error } = await query;
         if (error) {
             console.error('Error fetching surveys:', error);
         } else {
-            console.log('Fetched surveys:', data); // Add this line
+            console.log("Surveys fetched:", data);
             setSurveys(data);
+            if (!isEnterprise) {
+                await fetchAnsweredSurveys(data);
+            } else {
+                setAvailableSurveys(data);
+            }
         }
     };
 
@@ -287,10 +329,20 @@ function SurveyComponent() {
     };
 
     const handleCreateSurvey = async (surveyData) => {
+        if (!user || !user.wallet?.address) {
+            console.error('No user wallet address available');
+            return;
+        }
+
         try {
             const { data, error } = await supabase
                 .from('surveys')
-                .insert([surveyData])
+                .insert([
+                    {
+                        ...surveyData,
+                        creator_wallet_address: user.wallet.address
+                    }
+                ])
                 .select();
 
             if (error) {
@@ -341,17 +393,24 @@ function SurveyComponent() {
                     console.error('Error updating user_survey_responses:', responseError);
                 }
 
-                await fetchAnsweredSurveys();
-                
-                if (!initialSurveyCompleted) {
-                    await supabase
-                        .from('users')
-                        .update({ initial_survey_completed: true })
-                        .eq('wallet_address', user.wallet.address);
+                // Increase credibility score and mark initial survey as completed
+                const newScore = credibilityScore + 5;
+                const { error: updateError } = await supabase
+                    .from('users')
+                    .update({ 
+                        credibility_score: newScore,
+                        initial_survey_completed: true 
+                    })
+                    .eq('wallet_address', user.wallet.address);
+
+                if (updateError) {
+                    console.error('Error updating user credibility score:', updateError);
+                } else {
+                    setCredibilityScore(newScore);
                     setInitialSurveyCompleted(true);
-                    setShowNamePrompt(true);
                 }
-                
+
+                await fetchSurveys();
                 setCurrentView('home');
             }
         } catch (error) {
@@ -364,6 +423,14 @@ function SurveyComponent() {
         setCurrentView(newView);
     };
 
+    const shouldShowAllSurveys = (userDetails) => {
+        return userDetails.credibility_score >= 15 || !userDetails.initial_survey_completed;
+    };
+
+    const canUserAnswerSurveys = (userDetails) => {
+        return userDetails.credibility_score >= 15 || !userDetails.initial_survey_completed;
+    };
+
     if (!authenticated) {
         return <LoginScreen />;
     }
@@ -373,18 +440,19 @@ function SurveyComponent() {
             <Navbar 
                 isEnterprise={isEnterprise} 
                 userName={userName}
-                nameType={nameType}
                 logout={logout}
                 setCurrentView={changeView}
                 credibilityScore={credibilityScore}
             />
             <div className="main-content">
-                {showNamePrompt && (
-                    <div className="name-prompt">
+                {showCredibilityPrompt && (
+                    <div className="credibility-prompt">
                         <h2>Increase Your Credibility</h2>
-                        <p>Would you like to create an RNS name (20 points) or stake 0.005 tRBTC (10 points)?</p>
-                        <button className="nav-button" onClick={() => handleNameVerification(true)}>Create RNS name</button>
-                        <button className="nav-button" onClick={() => handleNameVerification(false)}>Stake 0.005 tRBTC</button>
+                        <p>Would you like to create an RNS name (20 points) or stake 0.005 tRBTC (15 points)?</p>
+                        <div className="credibility-prompt-buttons">
+                            <button className="nav-button" onClick={() => handleNameVerification(true)}>Create RNS name</button>
+                            <button className="nav-button" onClick={() => handleNameVerification(false)}>Stake 0.005 tRBTC</button>
+                        </div>
                     </div>
                 )}
                 {currentView === 'profile' && (
@@ -412,6 +480,9 @@ function SurveyComponent() {
                             changeView('answer');
                         }}
                         currentView={currentView}
+                        canAnswerSurveys={canAnswerSurveys}
+                        credibilityScore={credibilityScore}
+                        initialSurveyCompleted={initialSurveyCompleted}
                     />
                 )}
                 {currentView === 'answered' && (
