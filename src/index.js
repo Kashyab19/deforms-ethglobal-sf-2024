@@ -1,7 +1,7 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { PrivyProvider } from '@privy-io/react-auth';
-import SurveyComponent from "./SurveyComponent";
+import SurveyComponent from "./components/SurveyComponent";
 
 const root = createRoot(document.getElementById("surveyElement"));
 root.render(

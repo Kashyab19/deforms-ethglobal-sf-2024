@@ -1,11 +1,6 @@
 {
   "dependencies": {
     "@privy-io/react-auth": "^1.92.0",
-    "@supabase/supabase-js": "^2.45.4",
-    "crypto-js": "^4.2.0",
-    "dotenv": "^16.4.5",
-    "ethers": "^5.7.2",
-    "face-api.js": "^0.22.2",
     "react": "latest",
     "react-dom": "latest",
     "survey-core": "latest",

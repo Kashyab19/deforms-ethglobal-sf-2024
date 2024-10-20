@@ -1,25 +1,4 @@
-/* You can add your custom css here.*/
-/* Add these rules at the beginning of your CSS file */
-html, body {
-    max-width: 100%;
-    overflow-x: hidden;
-}
-
-body {
-    font-family: Arial, sans-serif;
-    margin: 0;
-    padding: 0;
-    background-color: #f5f5f5;
-}
-
-.app-container {
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
-    align-items: center;
-    width: 100%;
-    overflow-x: hidden;
-}
+/* Add or update these styles in your src/index.css file */
 
 .login-container {
     display: flex;
@@ -30,337 +9,83 @@ body {
     background-color: #f5f5f5;
 }
 
-h1, h2 {
-    color: #333;
-    margin-bottom: 1rem;
+.login-container h1 {
+    margin-bottom: 2rem;
 }
 
-button {
-    background-color: #676FFF;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    font-size: 16px;
-    cursor: pointer;
-    border-radius: 5px;
-    transition: background-color 0.3s ease;
-}
-
-button:hover {
-    background-color: #4B51E8;
-}
-
-.navbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem 2rem;
-    background-color: #ffffff;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    width: 100%;
-    box-sizing: border-box;
-}
-
-.nav-right {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    position: relative;
-}
-
-.nav-button {
-    background-color: #676FFF;
-    color: white;
-    border: none;
-    padding: 0.5rem 1rem;
-    font-size: 14px;
-    cursor: pointer;
-    border-radius: 5px;
-    transition: background-color 0.3s ease;
-}
-
-.nav-button:hover {
-    background-color: #4B51E8;
-}
-
-.profile-menu {
-    display: flex;
-    align-items: center;
-    position: relative;
-}
-
-.profile-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background-color: #676FFF;
-    color: white;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-weight: bold;
-    font-size: 18px;
-    margin-right: 10px;
-}
-
-.hamburger {
-    width: 30px;
-    height: 20px;
-    position: relative;
-    cursor: pointer;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-}
-
-.hamburger span {
-    display: block;
-    height: 3px;
-    width: 100%;
-    background-color: #333;
-    transition: all 0.3s ease-in-out;
-}
-
-.hamburger.open span:nth-child(1) {
-    transform: translateY(8.5px) rotate(45deg);
-}
-
-.hamburger.open span:nth-child(2) {
-    opacity: 0;
-}
-
-.hamburger.open span:nth-child(3) {
-    transform: translateY(-8.5px) rotate(-45deg);
-}
-
-.menu {
-    position: absolute;
-    top: 100%;
-    right: 0;
-    background-color: white;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    padding: 15px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    z-index: 1000;
-    min-width: 200px;
-    margin-top: 10px;
-}
-
-.close-menu {
-    position: absolute;
-    top: 5px;
-    right: 5px;
-    background: none;
-    border: none;
-    font-size: 20px;
-    cursor: pointer;
-    color: #333;
-}
-
-.menu p {
-    margin: 0 0 15px 0;
-    font-size: 14px;
-    color: #666;
-    word-break: break-all;
-}
-
-.menu-item {
-    display: block;
-    width: 100%;
-    padding: 10px;
-    margin-bottom: 5px;
-    text-align: left;
-    background: none;
-    border: none;
-    cursor: pointer;
-    color: #333;
-    transition: background-color 0.3s;
-    border-radius: 4px;
-}
-
-.menu-item:hover {
-    background-color: #f0f0f0;
-}
-
-.profile-summary {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-}
-
-.main-content {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-    align-items: center;
-    padding: 2rem;
-    width: 100%;
-    max-width: 1200px;
-    box-sizing: border-box;
-}
-
-.profile-sidebar {
-    width: 300px;
-    background-color: #ffffff;
-    padding: 2rem;
-    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
-}
-
-.profile-details {
-    background-color: #f5f5f5;
-    border-radius: 8px;
-    padding: 1rem;
+.login-container p {
     margin-bottom: 1.5rem;
 }
 
-.profile-item {
-    margin-bottom: 0.75rem;
+.login {
+    display: flex;
+    gap: 1rem; /* This adds space between the login buttons */
 }
 
-.profile-label {
-    font-weight: bold;
-    color: #555;
-    display: block;
-    margin-bottom: 0.25rem;
-}
-
-.profile-value {
-    color: #333;
-    word-break: break-all;
-}
-
-.logout-button {
-    background-color: #ff4d4d;
+.login button {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    cursor: pointer;
+    border: none;
+    border-radius: 4px;
+    background-color: #676FFF;
     color: white;
+    transition: background-color 0.3s ease;
 }
 
-.logout-button:hover {
-    background-color: #ff3333;
+.login button:hover {
+    background-color: #4B51E8;
 }
 
-.survey-container {
-    flex: 1;
-    height: calc(100vh - 60px);
-    overflow: auto;
-    background-color: #ffffff;
-    padding: 2rem;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+.survey-card {
+    background-color: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-@media (max-width: 768px) {
-    .main-content {
-        flex-direction: column;
-    }
-
-    .profile-sidebar {
-        width: 100%;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-
-    .survey-container {
-        padding: 1rem;
-    }
+.survey-card h4 {
+    margin-top: 0;
+    margin-bottom: 1rem;
 }
 
-/* Add this to your existing CSS */
-.creator-container {
-    flex: 1;
-    height: calc(100vh - 60px);
-    overflow: auto;
+.survey-card-buttons {
+    display: flex;
+    gap: 0.75rem; /* This adds space between buttons in the cards */
 }
 
-/* Modify the existing .survey-container style */
-.survey-container {
-    flex: 1;
-    height: calc(100vh - 60px);
-    overflow: auto;
-    background-color: #ffffff;
-    padding: 2rem;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+.survey-card button, .survey-card-buttons button {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    cursor: pointer;
+    border: none;
+    border-radius: 4px;
+    background-color: #676FFF;
+    color: white;
+    transition: background-color 0.3s ease;
 }
 
-/* Add this if you want to adjust the layout of the creator */
-.svc-creator {
-    height: 100%;
+.survey-card button:hover, .survey-card-buttons button:hover {
+    background-color: #4B51E8;
 }
 
-.svc-creator__content-wrapper {
-    height: calc(100% - 78px);
-}
-
-.svc-creator__content-holder {
-    height: 100%;
-}
-
-.svc-creator-tab-content {
-    height: 100%;
-}
+/* You may also want to add some general styles for better overall spacing */
 
 .home-container {
-    width: 100%;
-    max-width: 800px;
-    text-align: center;
     padding: 2rem;
 }
 
 .survey-list {
+    align-items: center;
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 1rem;
-    margin-top: 1rem;
-    width: 100%;
+    gap: 1.5rem;
 }
 
-.survey-card {
-    background-color: #ffffff;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    padding: 1rem;
-    display: flex;
-    min-height: 7.5rem;
-    flex-direction: column;
-    justify-content: space-between;
-    align-items: center;
-    transition: box-shadow 0.3s ease;
-    text-align: center;
-}
+/* If you want to adjust the navbar spacing */
 
-.survey-card:hover {
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-
-.survey-card h4 {
-    margin: 0 0 1rem 0;
-    font-size: 1.2rem;
-}
-
-.edit-button {
-    background-color: #676FFF;
-    color: white;
-    border: none;
-    padding: 0.5rem 1rem;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-}
-
-.edit-button:hover {
-    background-color: #4B51E8;
-}
-
-.creator-container,
-.survey-container {
-    width: 100%;
-    max-width: 1000px;
-    margin: 0 auto;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-/* Adjust navbar styles for better alignment */
 .navbar {
     padding: 1rem 2rem;
 }
@@ -368,121 +93,4 @@ button:hover {
 .nav-buttons {
     display: flex;
     gap: 1rem;
-}
-
-.nav-button {
-    background-color: #676FFF;
-    color: white;
-    border: none;
-    padding: 0.5rem 1rem;
-    align-self: flex-end;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-}
-
-.nav-button:hover {
-    background-color: #4B51E8;
-}
-
-/* Add some responsive adjustments */
-@media (max-width: 768px) {
-    .survey-list {
-        grid-template-columns: 1fr;
-    }
-
-    .navbar {
-        flex-direction: column;
-        align-items: center;
-        padding: 1rem;
-    }
-
-    .nav-right {
-        flex-direction: row;
-        justify-content: flex-end;
-        width: 100%;
-    }
-
-    .nav-button {
-        margin-bottom: 0.5rem;
-    }
-
-    .profile-menu {
-        margin-top: 1rem;
-    }
-
-    .main-content {
-        padding: 1rem;
-    }
-
-    .survey-container {
-        padding: 1rem;
-    }
-}
-
-/* Add these new styles for better centering */
-.svc-creator {
-    width: 100%;
-    max-width: 100%;
-    overflow-x: hidden;
-}
-
-.sv-root-modern {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-.creator-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-    padding: 1rem;
-    background-color: #f5f5f5;
-    border-bottom: 1px solid #e0e0e0;
-}
-
-.creator-header h2 {
-    margin: 0;
-}
-
-.close-button {
-    background-color: #ff4d4d;
-    color: white;
-    border: none;
-    padding: 0.5rem 1rem;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-}
-
-.close-button:hover {
-    background-color: #ff3333;
-}
-
-.ens-name {
-    background-color: #f0f0f0;
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    font-size: 0.9rem;
-    margin-right: 1rem;
-}
-
-.profile-page {
-    background-color: white;
-    padding: 2rem;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    max-width: 500px;
-    width: 100%;
-}
-
-.profile-info {
-    margin-bottom: 1rem;
-}
-
-.profile-info p {
-    margin: 0.5rem 0;
 }

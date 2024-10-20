@@ -60,19 +60,7 @@ export async function getENSName(address) {
 }
 
 export async function isENSNameAvailable(name) {
-  const provider = getProvider();
-  try {
-    // First, check availability in the actual ENS
-    const address = await provider.resolveName(name + '.eth');
-    if (address) {
-      console.log(`Name ${name}.eth is not available in actual ENS`);
-      return false;
-    }
-  } catch (error) {
-    console.warn('Error checking actual ENS availability, falling back to mock registry:', error);
-  }
-
-  // If not found in actual ENS or there was an error, check mock registry
+  // This function will only use the mock registry
   return new Promise((resolve) => {
     setTimeout(() => {
       const fullName = name + '.eth';
