@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import '../styles/Navbar.css';
 
-function Navbar({ isEnterprise, ensName, logout, setCurrentView, credibilityScore }) {
+function Navbar({ isEnterprise, userName, logout, setCurrentView, credibilityScore }) {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
@@ -25,11 +25,11 @@ function Navbar({ isEnterprise, ensName, logout, setCurrentView, credibilityScor
                 </div>
                 <div className="profile-menu">
                     <div className="profile-icon" onClick={toggleMenu}>
-                        <span>{ensName ? ensName[0].toUpperCase() : '👤'}</span>
+                        <span>{userName ? userName[0].toUpperCase() : '👤'}</span>
                     </div>
                     {isMenuOpen && (
                         <div className="menu">
-                            <p>{ensName || 'No ENS Name'}</p>
+                            <p>{userName || 'No ENS Name'}</p>
                             <button className="menu-item" onClick={() => { setCurrentView('profile'); toggleMenu(); }}>Profile</button>
                             <button className="menu-item logout-button" onClick={logout}>Logout</button>
                         </div>

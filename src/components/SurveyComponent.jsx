@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { usePrivy } from '@privy-io/react-auth';
 import { supabase } from '../supabaseClient';
-import { getENSName, registerENS } from '../ensService';
+import { getName, verifyNameOwnership, registerRNS } from '../ensService';
 import LoginScreen from './LoginScreen';
 import Navbar from './Navbar';
 import ProfilePage from './ProfilePage';
@@ -17,12 +17,17 @@ function SurveyComponent() {
     const [surveys, setSurveys] = useState([]);
     const [answeredSurveys, setAnsweredSurveys] = useState([]);
     const [isEnterprise, setIsEnterprise] = useState(false);
-    const [ensName, setEnsName] = useState(null);
+    const [userName, setUserName] = useState(null);
     const [currentSurvey, setCurrentSurvey] = useState(null);
-    const [showENSPrompt, setShowENSPrompt] = useState(false);
+    const [showNamePrompt, setShowNamePrompt] = useState(false);
     const [credibilityScore, setCredibilityScore] = useState(0);
+    const [nameType, setNameType] = useState(null);
+    const [initialSurveyCompleted, setInitialSurveyCompleted] = useState(false);
+    const [availableSurveys, setAvailableSurveys] = useState([]);
 
     useEffect(() => {
+        console.log("Authentication status:", authenticated);
+        console.log("User object:", user);
         if (authenticated && user) {
             handleUserAuthentication();
         }
@@ -31,25 +36,32 @@ function SurveyComponent() {
     const handleUserAuthentication = async () => {
         if (user && user.wallet?.address) {
             try {
+                console.log("Authenticating user:", user.wallet.address);
                 let userDetails = await fetchUser(user.wallet.address);
-                
+                console.log("Fetched user details:", userDetails);
+
                 if (!userDetails) {
+                    console.log("User not found, creating new user");
                     userDetails = await createUser(user.wallet.address);
+                    console.log("Created user details:", userDetails);
                 }
 
                 if (userDetails) {
-                    setIsEnterprise(userDetails.type === 'enterprise');
-                    setCredibilityScore(userDetails.credibility_score);
+                    console.log("Processing user details:", userDetails);
+                    setUserName(userDetails.ens_name);
+                    setIsEnterprise(userDetails.user_type === 'enterprise');
+                    setCredibilityScore(userDetails.credibility_score || 0);
+                    setInitialSurveyCompleted(userDetails.initial_survey_completed || false);
 
-                    const ensName = await getENSName(user.wallet.address);
-                    if (ensName) {
-                        setEnsName(ensName);
+                    if (userDetails.credibility_score >= 10 || userDetails.initial_survey_completed) {
+                        console.log("Fetching all surveys");
+                        await fetchAllSurveys();
                     } else {
-                        setShowENSPrompt(true);
+                        console.log("Fetching initial survey");
+                        await fetchInitialSurvey();
                     }
 
-                    await fetchSurveys();
-                    if (userDetails.type !== 'enterprise') {
+                    if (userDetails.user_type !== 'enterprise') {
                         await fetchAnsweredSurveys();
                     }
                 } else {
@@ -57,36 +69,168 @@ function SurveyComponent() {
                 }
             } catch (error) {
                 console.error('Error in handleUserAuthentication:', error);
+                console.error('Error stack:', error.stack);
             }
+        } else {
+            console.error('User or user wallet address is undefined');
         }
     };
 
-    const handleENSVerification = async (createENS) => {
-        if (createENS) {
-            const newENSName = await registerENS(user.wallet.address);
-            await updateUserENS(user.wallet.address, newENSName);
-            setEnsName(newENSName);
-            await updateUserCredibility(user.wallet.address, 25);
+    const fetchUser = async (walletAddress) => {
+        console.log("Fetching user:", walletAddress);
+        try {
+            const { data, error } = await supabase
+                .from('users')
+                .select('*')
+                .eq('wallet_address', walletAddress)
+                .single();
+
+            if (error) {
+                console.error('Error fetching user:', error);
+                return null;
+            }
+
+            console.log("Fetched user data:", data);
+            return data;
+        } catch (error) {
+            console.error('Exception in fetchUser:', error);
+            return null;
+        }
+    };
+
+    const createUser = async (walletAddress) => {
+        console.log("Creating new user:", walletAddress);
+        try {
+            console.log("Calling getName function");
+            const nameResult = await getName(walletAddress);
+            console.log("getName result:", nameResult);
+
+            const name = nameResult ? nameResult.name : walletAddress.slice(0, 8); // Use first 8 characters of wallet address if no name
+
+            const isEnterprise = localStorage.getItem('isEnterprise') === 'true';
+
+            const newUser = {
+                wallet_address: walletAddress,
+                ens_name: name, // This will never be null now
+                user_type: isEnterprise ? 'enterprise' : 'regular',
+                credibility_score: 0,
+                initial_survey_completed: false
+            };
+
+            console.log("Attempting to insert new user:", newUser);
+            const { data, error } = await supabase
+                .from('users')
+                .insert([newUser])
+                .select();
+
+            if (error) {
+                console.error('Error creating user:', error);
+                return null;
+            }
+
+            console.log("Created new user:", data[0]);
+            return data[0];
+        } catch (error) {
+            console.error('Exception in createUser:', error);
+            console.error('Error stack:', error.stack);
+            return null;
+        }
+    };
+
+    const fetchInitialSurvey = async () => {
+        console.log("Fetching initial survey");
+        const { data, error } = await supabase
+            .from('surveys')
+            .select('*')
+            .limit(1);
+
+        if (error) {
+            console.error('Error fetching initial survey:', error);
+        } else {
+            console.log("Initial survey fetched:", data);
+            setSurveys(data);
+        }
+    };
+
+    const fetchAllSurveys = async () => {
+        console.log("Fetching all surveys");
+        const { data, error } = await supabase
+            .from('surveys')
+            .select('*');
+
+        if (error) {
+            console.error('Error fetching all surveys:', error);
+        } else {
+            console.log("All surveys fetched:", data);
+            setSurveys(data);
+            updateAvailableSurveys(data);
+        }
+    };
+
+    const fetchAnsweredSurveys = async () => {
+        if (!user || !user.wallet?.address) {
+            console.error('No user wallet address available');
+            return;
+        }
+
+        console.log("Fetching answered surveys for wallet:", user.wallet.address);
+        const { data, error } = await supabase
+            .from('user_survey_responses')
+            .select('survey_id')
+            .eq('user_wallet_address', user.wallet.address);
+        
+        if (error) {
+            console.error('Error fetching answered surveys:', error);
+        } else {
+            console.log("Answered surveys fetched:", data);
+            const answeredIds = data.map(item => item.survey_id);
+            setAnsweredSurveys(surveys.filter(survey => answeredIds.includes(survey.id)));
+            updateAvailableSurveys(surveys, answeredIds);
+        }
+    };
+
+    const updateAvailableSurveys = (allSurveys, answeredIds) => {
+        const available = allSurveys.filter(survey => !answeredIds.includes(survey.id));
+        setAvailableSurveys(available);
+    };
+
+    const handleNameVerification = async (createName) => {
+        if (createName) {
+            const newRNSName = await registerRNS(user.wallet.address);
+            if (newRNSName) {
+                await updateUserName(user.wallet.address, newRNSName, 'RNS');
+                setUserName(newRNSName);
+                setNameType('RNS');
+                await updateUserCredibility(user.wallet.address, 20);
+                await fetchAllSurveys();
+            }
         } else {
             // Implement staking logic here
-            console.log("User needs to stake 0.005 ETH");
+            console.log("User needs to stake 0.005 tRBTC");
+            // Assuming staking is successful:
+            await updateUserCredibility(user.wallet.address, 10);
+            await fetchAllSurveys();
         }
-        setShowENSPrompt(false);
+        setShowNamePrompt(false);
     };
 
-    const updateUserENS = async (walletAddress, ensName) => {
+    const updateUserName = async (walletAddress, name, type) => {
         const { data, error } = await supabase
             .from('users')
-            .update({ ens_name: ensName })
+            .update({ 
+                ens_name: name,
+                name_type: type
+            })
             .eq('wallet_address', walletAddress);
 
         if (error) {
-            console.error('Error updating user ENS:', error);
+            console.error('Error updating user name:', error);
+        } else {
+            console.log(`Updated user name to ${name} (${type}) for address ${walletAddress}`);
         }
     };
 
     const updateUserCredibility = async (walletAddress, points) => {
-        // First, get the current credibility score
         const { data: userData, error: fetchError } = await supabase
             .from('users')
             .select('credibility_score')
@@ -100,7 +244,6 @@ function SurveyComponent() {
 
         const newScore = (userData.credibility_score || 0) + points;
 
-        // Then, update with the new score
         const { data, error } = await supabase
             .from('users')
             .update({ credibility_score: newScore })
@@ -111,48 +254,6 @@ function SurveyComponent() {
         } else {
             setCredibilityScore(newScore);
         }
-    };
-
-    const fetchUser = async (walletAddress) => {
-        const { data, error } = await supabase
-            .from('users')
-            .select('*')
-            .eq('wallet_address', walletAddress)
-            .single();
-
-        if (error && error.code !== 'PGRST116') {
-            console.error('Error fetching user:', error);
-            return null;
-        }
-
-        return data;
-    };
-
-    const createUser = async (walletAddress) => {
-        let ensName = await getENSName(walletAddress);
-        if (!ensName) {
-            ensName = await createMockENSName(walletAddress);
-        }
-
-        const isEnterprise = localStorage.getItem('isEnterprise') === 'true';
-
-        const newUser = {
-            wallet_address: walletAddress,
-            ens_name: ensName,
-            type: isEnterprise ? 'enterprise' : 'regular'
-        };
-
-        const { data, error } = await supabase
-            .from('users')
-            .insert([newUser])
-            .select();
-
-        if (error) {
-            console.error('Error creating user:', error);
-            return null;
-        }
-
-        return data[0];
     };
 
     const createMockENSName = async (address) => {
@@ -175,21 +276,8 @@ function SurveyComponent() {
         if (error) {
             console.error('Error fetching surveys:', error);
         } else {
+            console.log('Fetched surveys:', data); // Add this line
             setSurveys(data);
-        }
-    };
-
-    const fetchAnsweredSurveys = async () => {
-        const { data, error } = await supabase
-            .from('user_survey_responses')
-            .select('survey_id')
-            .eq('user_ens_name', ensName);
-        
-        if (error) {
-            console.error('Error fetching answered surveys:', error);
-        } else {
-            const answeredSurveyIds = data.map(item => item.survey_id);
-            setAnsweredSurveys(answeredSurveyIds);
         }
     };
 
@@ -218,18 +306,52 @@ function SurveyComponent() {
     };
 
     const handleAnswerSurvey = async (surveyId, answers) => {
+        if (!user || !user.wallet?.address) {
+            console.error('No user wallet address available');
+            return;
+        }
+
         try {
             const { data, error } = await supabase
                 .from('survey_results')
                 .insert([
-                    { survey_id: surveyId, user_ens_name: ensName, answers: answers }
+                    { 
+                        survey_id: surveyId, 
+                        user_wallet_address: user.wallet.address, 
+                        answers: answers 
+                    }
                 ]);
 
             if (error) {
                 console.error('Error submitting survey answers:', error);
             } else {
                 console.log('Survey answers submitted successfully:', data);
+                
+                // Also update the user_survey_responses table
+                const { error: responseError } = await supabase
+                    .from('user_survey_responses')
+                    .insert([
+                        { 
+                            user_wallet_address: user.wallet.address, 
+                            survey_id: surveyId 
+                        }
+                    ]);
+
+                if (responseError) {
+                    console.error('Error updating user_survey_responses:', responseError);
+                }
+
                 await fetchAnsweredSurveys();
+                
+                if (!initialSurveyCompleted) {
+                    await supabase
+                        .from('users')
+                        .update({ initial_survey_completed: true })
+                        .eq('wallet_address', user.wallet.address);
+                    setInitialSurveyCompleted(true);
+                    setShowNamePrompt(true);
+                }
+                
                 setCurrentView('home');
             }
         } catch (error) {
@@ -250,32 +372,32 @@ function SurveyComponent() {
         <div className="app-container">
             <Navbar 
                 isEnterprise={isEnterprise} 
-                ensName={ensName} 
+                userName={userName}
+                nameType={nameType}
                 logout={logout}
                 setCurrentView={changeView}
                 credibilityScore={credibilityScore}
             />
             <div className="main-content">
-                {showENSPrompt && (
-                    <div className="ens-prompt">
-                        <h2>ENS Verification</h2>
-                        <p>You don't have an ENS name. Would you like to create one and increase your credibility by 25 points?</p>
-                        <button onClick={() => handleENSVerification(true)}>Yes, create ENS name</button>
-                        <button onClick={() => handleENSVerification(false)}>No, I'll stake 0.005 ETH instead</button>
+                {showNamePrompt && (
+                    <div className="name-prompt">
+                        <h2>Increase Your Credibility</h2>
+                        <p>Would you like to create an RNS name (20 points) or stake 0.005 tRBTC (10 points)?</p>
+                        <button className="nav-button" onClick={() => handleNameVerification(true)}>Create RNS name</button>
+                        <button className="nav-button" onClick={() => handleNameVerification(false)}>Stake 0.005 tRBTC</button>
                     </div>
                 )}
                 {currentView === 'profile' && (
                     <ProfilePage 
                         user={user} 
-                        ensName={ensName} 
+                        userName={userName} 
                         isEnterprise={isEnterprise} 
                         onClose={() => setCurrentView(previousView)}
                     />
                 )}
-                {(currentView === 'home' || currentView === 'answered') && (
+                {currentView === 'home' && (
                     <SurveyList 
-                        surveys={surveys}
-                        answeredSurveys={answeredSurveys}
+                        surveys={availableSurveys}
                         isEnterprise={isEnterprise}
                         onEditSurvey={(survey) => {
                             setCurrentSurvey(survey);
@@ -285,7 +407,21 @@ function SurveyComponent() {
                             setCurrentSurvey(surveys.find(s => s.id === surveyId));
                             changeView('results');
                         }}
-                        onAnswerSurvey={answerSurvey}
+                        onAnswerSurvey={(survey) => {
+                            setCurrentSurvey(survey);
+                            changeView('answer');
+                        }}
+                        currentView={currentView}
+                    />
+                )}
+                {currentView === 'answered' && (
+                    <SurveyList 
+                        surveys={answeredSurveys}
+                        isEnterprise={isEnterprise}
+                        onViewResults={(surveyId) => {
+                            setCurrentSurvey(surveys.find(s => s.id === surveyId));
+                            changeView('results');
+                        }}
                         currentView={currentView}
                     />
                 )}

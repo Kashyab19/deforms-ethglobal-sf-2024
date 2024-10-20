@@ -28,6 +28,10 @@
     margin-bottom: 1rem;
 }
 
+.name-prompt {
+    align-items: center;
+}
+
 .ens-prompt button {
     margin: 0.5rem;
     padding: 0.5rem 1rem;

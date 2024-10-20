@@ -3,6 +3,11 @@ import { createRoot } from "react-dom/client";
 import { PrivyProvider } from '@privy-io/react-auth';
 import SurveyComponent from "./components/SurveyComponent";
 
+import { rootstockTestnet } from "viem/chains";
+import {addRpcUrlOverrideToChain} from '@privy-io/react-auth';
+
+const mainnetOverride = addRpcUrlOverrideToChain(rootstockTestnet, "https://rpc.testnet.rootstock.io/eRrAbzc5vDZQzrXYcG0i5j1rvxk3HT-T");
+
 const root = createRoot(document.getElementById("surveyElement"));
 root.render(
   <PrivyProvider
@@ -12,7 +17,6 @@ root.render(
       appearance: {
         theme: 'light',
         accentColor: '#676FFF',
-        // logo: 'https://your-logo-url.com/logo.png',
       },
       embeddedWallets: {
         createOnLogin: 'users-without-wallets',
