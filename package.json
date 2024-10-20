@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "@privy-io/react-auth": "^1.92.0",
+    "@supabase/supabase-js": "^2.45.6",
     "react": "latest",
     "react-dom": "latest",
     "survey-core": "latest",

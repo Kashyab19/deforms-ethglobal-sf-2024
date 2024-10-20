@@ -1,0 +1,37 @@
+.survey-card {
+    background-color: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.survey-card h4 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+}
+
+.survey-card-buttons {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+}
+
+.survey-card button {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    cursor: pointer;
+    border: none;
+    border-radius: 4px;
+    background-color: #676FFF;
+    color: white;
+    transition: background-color 0.3s ease;
+}
+
+.survey-card button:hover {
+    background-color: #4B51E8;
+}

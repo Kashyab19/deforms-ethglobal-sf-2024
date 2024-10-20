@@ -1,0 +1,53 @@
+.app-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+.main-content {
+    flex: 1;
+    padding: 2rem;
+}
+
+.ens-prompt {
+    background-color: white;
+    border-radius: 8px;
+    padding: 2rem;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    max-width: 500px;
+    width: 100%;
+    margin: 2rem auto;
+    text-align: center;
+}
+
+.ens-prompt h2 {
+    margin-bottom: 1rem;
+}
+
+.ens-prompt p {
+    margin-bottom: 1rem;
+}
+
+.ens-prompt button {
+    margin: 0.5rem;
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.3s ease;
+}
+
+.ens-prompt button:first-of-type {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.ens-prompt button:last-of-type {
+    background-color: #f44336;
+    color: white;
+}
+
+.ens-prompt button:hover {
+    opacity: 0.9;
+}

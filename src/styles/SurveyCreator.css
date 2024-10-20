@@ -1,0 +1,20 @@
+.survey-creator {
+    height: calc(100vh - 60px);
+    overflow: auto;
+}
+
+.survey-creator button {
+    margin-top: 1rem;
+    padding: 0.5rem 1rem;
+    font-size: 1rem;
+    cursor: pointer;
+    border: none;
+    border-radius: 4px;
+    background-color: #676FFF;
+    color: white;
+    transition: background-color 0.3s ease;
+}
+
+.survey-creator button:hover {
+    background-color: #4B51E8;
+}

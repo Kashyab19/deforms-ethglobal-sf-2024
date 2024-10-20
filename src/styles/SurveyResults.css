@@ -1,0 +1,54 @@
+.results-container {
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.result-card {
+    background-color: #f9f9f9;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.result-card h3 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: #333;
+}
+
+.answer-item {
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.answer-item:last-child {
+    border-bottom: none;
+}
+
+.answer-item p {
+    margin: 0.5rem 0;
+}
+
+.answer-item strong {
+    color: #555;
+}
+
+.results-container button {
+    margin-top: 1rem;
+    padding: 0.5rem 1rem;
+    font-size: 1rem;
+    cursor: pointer;
+    border: none;
+    border-radius: 4px;
+    background-color: #676FFF;
+    color: white;
+    transition: background-color 0.3s ease;
+}
+
+.results-container button:hover {
+    background-color: #4B51E8;
+}
