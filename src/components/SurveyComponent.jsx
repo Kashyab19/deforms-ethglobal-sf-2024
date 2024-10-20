@@ -39,20 +39,28 @@ function SurveyComponent() {
     const setupDataTokenContract = useCallback(async () => {
         try {
             console.log("Setting up DataToken contract...");
-            const provider = new ethers.BrowserProvider(window.ethereum);
-            const signer = await provider.getSigner();
-            
+            const provider = new ethers.JsonRpcProvider(process.env.REACT_APP_ROOTSTACK_RPC_URL);
+            console.log("Provider created:", provider);
+
+            // Test provider connection
+            try {
+                const network = await provider.getNetwork();
+                console.log("Connected to network:", network);
+            } catch (error) {
+                console.error("Failed to connect to the network:", error);
+                throw new Error("Unable to connect to the Rootstock testnet. Please check your network connection and try again.");
+            }
+
             if (!deployedContractAddress) {
                 console.log("No deployed contract address available");
                 return;
             }
-    
+
             console.log("Contract address:", deployedContractAddress);
-            console.log("Signer address:", await signer.getAddress());
-    
-            const contract = new ethers.Contract(deployedContractAddress, DataTokenABI, signer);
+
+            const contract = new ethers.Contract(deployedContractAddress, DataTokenABI, provider);
             console.log("Contract instance created:", contract);
-    
+
             // Test contract connection
             try {
                 const name = await contract.name();
@@ -60,7 +68,7 @@ function SurveyComponent() {
             } catch (error) {
                 console.error("Error calling contract method:", error);
             }
-    
+
             setDataTokenContract(contract);
             setContractError(null);
             console.log("DataToken contract set up successfully");
@@ -633,10 +641,15 @@ function SurveyComponent() {
         }
 
         try {
-            // Deploy the contract
+            console.log("Deploying contract...");
+            
+            // Create contract factory
             const factory = new ethers.ContractFactory(DataTokenABI, DataTokenBytecode);
             const deployTransaction = factory.getDeployTransaction(user.wallet.address);
 
+            console.log("Deploy transaction data:", deployTransaction);
+
+            // Send deployment transaction
             const deployTxHash = await sendTransaction({
                 to: null, // For contract deployment, 'to' should be null
                 data: deployTransaction.data,
@@ -653,7 +666,7 @@ function SurveyComponent() {
             setDeployedContractAddress(contractAddress);
 
             // Mint the token
-            const contract = new ethers.Contract(contractAddress, DataTokenABI, provider);
+            const contract = new ethers.Contract(contractAddress, DataTokenABI);
             const mintData = contract.interface.encodeFunctionData('mint', [
                 user.wallet.address,
                 Date.now(), // Using timestamp as tokenId for simplicity
@@ -663,6 +676,9 @@ function SurveyComponent() {
                 JSON.stringify(result.answers).length,
                 JSON.stringify(result)
             ]);
+
+            console.log("Minting token...");
+            console.log("Mint transaction data:", mintData);
 
             const mintTxHash = await sendTransaction({
                 to: contractAddress,
@@ -677,6 +693,7 @@ function SurveyComponent() {
             console.log("Survey result minted as DataToken successfully");
         } catch (error) {
             console.error("Error deploying contract and minting token:", error);
+            console.error("Full error object:", JSON.stringify(error, null, 2));
         }
     };
 

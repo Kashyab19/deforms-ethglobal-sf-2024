@@ -4,9 +4,9 @@ import { PrivyProvider } from '@privy-io/react-auth';
 import SurveyComponent from "./components/SurveyComponent";
 
 import { rootstockTestnet } from "viem/chains";
-import {addRpcUrlOverrideToChain} from '@privy-io/react-auth';
+import { addRpcUrlOverrideToChain } from '@privy-io/react-auth';
 
-const mainnetOverride = addRpcUrlOverrideToChain(rootstockTestnet, "https://rpc.testnet.rootstock.io/eRrAbzc5vDZQzrXYcG0i5j1rvxk3HT-T");
+const rootstockTestnetOverride = addRpcUrlOverrideToChain(rootstockTestnet, process.env.REACT_APP_ROOTSTACK_RPC_URL);
 
 const root = createRoot(document.getElementById("surveyElement"));
 root.render(
@@ -21,6 +21,7 @@ root.render(
       embeddedWallets: {
         createOnLogin: 'users-without-wallets',
       },
+      supportedChains: [rootstockTestnetOverride],
     }}
   >
     <SurveyComponent />
