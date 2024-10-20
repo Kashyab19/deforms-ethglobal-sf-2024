@@ -4,6 +4,7 @@ import '../styles/SurveyResults.css';
 
 function SurveyResults({ surveyId, onBack, isEnterprise, onMintResult, dataTokenContract }) {
     const [results, setResults] = useState([]);
+    const [isDeploying, setIsDeploying] = useState(false);
 
     useEffect(() => {
         fetchResults();
@@ -33,7 +34,14 @@ function SurveyResults({ surveyId, onBack, isEnterprise, onMintResult, dataToken
 
     const handleMint = async (result) => {
         if (onMintResult) {
-            await onMintResult(result);
+            setIsDeploying(true);
+            try {
+                await onMintResult(result);
+            } catch (error) {
+                console.error("Error minting result:", error);
+            } finally {
+                setIsDeploying(false);
+            }
         }
     };
 
@@ -53,8 +61,12 @@ function SurveyResults({ surveyId, onBack, isEnterprise, onMintResult, dataToken
                             </div>
                         ))}
                         {isEnterprise && (
-                            <button onClick={() => handleMint(result)} className="mint-button">
-                                Mint Result
+                            <button 
+                                onClick={() => handleMint(result)} 
+                                className="mint-button"
+                                disabled={isDeploying}
+                            >
+                                {isDeploying ? "Deploying & Minting..." : "Mint Result"}
                             </button>
                         )}
                     </div>

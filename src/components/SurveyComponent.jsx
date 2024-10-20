@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { usePrivy } from '@privy-io/react-auth';
+import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { ethers } from 'ethers';
 import { supabase } from '../supabaseClient';
 import { getName, verifyNameOwnership, registerRNS } from '../ensService';
 import DataTokenABI from '../abis/DataTokenABI.json';
+import { DataTokenBytecode } from '../abis/DataTokenBytecode';
 import LoginScreen from './LoginScreen';
 import Navbar from './Navbar';
 import ProfilePage from './ProfilePage';
@@ -14,7 +15,8 @@ import TokenMarketplace from './TokenMarketplace';
 import "../styles/SurveyComponent.css";
 
 function SurveyComponent() {
-    const { authenticated, user, logout } = usePrivy();
+    const { authenticated, user, logout, sendTransaction } = usePrivy();
+    const { wallets } = useWallets();
     const [currentView, setCurrentView] = useState('home');
     const [previousView, setPreviousView] = useState('home');
     const [surveys, setSurveys] = useState([]);
@@ -32,26 +34,25 @@ function SurveyComponent() {
     const [showCredibilityPrompt, setShowCredibilityPrompt] = useState(false);
     const [dataTokenContract, setDataTokenContract] = useState(null);
     const [contractError, setContractError] = useState(null);
+    const [deployedContractAddress, setDeployedContractAddress] = useState(null);
 
     const setupDataTokenContract = useCallback(async () => {
         try {
             console.log("Setting up DataToken contract...");
             const provider = new ethers.BrowserProvider(window.ethereum);
-            console.log("Provider created:", provider);
             const signer = await provider.getSigner();
-            console.log("Signer obtained:", signer);
-            const contractAddress = process.env.REACT_APP_DATA_TOKEN_ADDRESS;
             
-            console.log("Contract address:", contractAddress);
-            console.log("Signer address:", await signer.getAddress());
-
-            if (!contractAddress) {
-                throw new Error("Contract address is not set in environment variables");
+            if (!deployedContractAddress) {
+                console.log("No deployed contract address available");
+                return;
             }
-
-            const contract = new ethers.Contract(contractAddress, DataTokenABI, signer);
+    
+            console.log("Contract address:", deployedContractAddress);
+            console.log("Signer address:", await signer.getAddress());
+    
+            const contract = new ethers.Contract(deployedContractAddress, DataTokenABI, signer);
             console.log("Contract instance created:", contract);
-
+    
             // Test contract connection
             try {
                 const name = await contract.name();
@@ -59,7 +60,7 @@ function SurveyComponent() {
             } catch (error) {
                 console.error("Error calling contract method:", error);
             }
-
+    
             setDataTokenContract(contract);
             setContractError(null);
             console.log("DataToken contract set up successfully");
@@ -67,7 +68,13 @@ function SurveyComponent() {
             console.error("Error setting up DataToken contract:", error);
             setContractError(error.message);
         }
-    }, []);
+    }, [deployedContractAddress]);
+
+    useEffect(() => {
+        if (deployedContractAddress) {
+            setupDataTokenContract();
+        }
+    }, [deployedContractAddress, setupDataTokenContract]);
 
     useEffect(() => {
         console.log("Authentication status:", authenticated);
@@ -612,6 +619,67 @@ function SurveyComponent() {
         }
     };
 
+    const deployAndMintResult = async (result) => {
+        if (!user || !wallets || wallets.length === 0) {
+            console.error("No user wallet available");
+            return;
+        }
+
+        const embeddedWallet = wallets.find(wallet => wallet.walletClientType === 'privy');
+
+        if (!embeddedWallet) {
+            console.error("No embedded wallet found");
+            return;
+        }
+
+        try {
+            // Deploy the contract
+            const factory = new ethers.ContractFactory(DataTokenABI, DataTokenBytecode);
+            const deployTransaction = factory.getDeployTransaction(user.wallet.address);
+
+            const deployTxHash = await sendTransaction({
+                to: null, // For contract deployment, 'to' should be null
+                data: deployTransaction.data,
+            });
+
+            console.log("Contract deployment transaction sent:", deployTxHash);
+
+            // Wait for the transaction to be mined
+            const provider = new ethers.JsonRpcProvider(process.env.REACT_APP_ROOTSTACK_RPC_URL);
+            const receipt = await provider.waitForTransaction(deployTxHash);
+
+            const contractAddress = receipt.contractAddress;
+            console.log("DataToken contract deployed to:", contractAddress);
+            setDeployedContractAddress(contractAddress);
+
+            // Mint the token
+            const contract = new ethers.Contract(contractAddress, DataTokenABI, provider);
+            const mintData = contract.interface.encodeFunctionData('mint', [
+                user.wallet.address,
+                Date.now(), // Using timestamp as tokenId for simplicity
+                `Survey Result for Survey ${result.survey_id}`,
+                `Result from ${result.user_wallet_address}`,
+                "Survey Result",
+                JSON.stringify(result.answers).length,
+                JSON.stringify(result)
+            ]);
+
+            const mintTxHash = await sendTransaction({
+                to: contractAddress,
+                data: mintData,
+            });
+
+            console.log("Token minting transaction sent:", mintTxHash);
+
+            // Wait for the minting transaction to be mined
+            await provider.waitForTransaction(mintTxHash);
+
+            console.log("Survey result minted as DataToken successfully");
+        } catch (error) {
+            console.error("Error deploying contract and minting token:", error);
+        }
+    };
+
     // Call this function after setting up the contract
     useEffect(() => {
         if (dataTokenContract) {
@@ -707,7 +775,7 @@ function SurveyComponent() {
                         surveyId={currentSurvey?.id}
                         onBack={() => changeView('home')}
                         isEnterprise={isEnterprise}
-                        onMintResult={handleMintResult}
+                        onMintResult={deployAndMintResult}
                         dataTokenContract={dataTokenContract}
                     />
                 )}
