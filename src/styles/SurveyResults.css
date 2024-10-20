@@ -52,3 +52,22 @@
 .results-container button:hover {
     background-color: #4B51E8;
 }
+
+.mint-button {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 14px;
+    margin: 4px 2px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.3s;
+}
+
+.mint-button:hover {
+    background-color: #45a049;
+}

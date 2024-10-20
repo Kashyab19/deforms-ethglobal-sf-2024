@@ -1,13 +1,16 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { usePrivy } from '@privy-io/react-auth';
+import { ethers } from 'ethers';
 import { supabase } from '../supabaseClient';
 import { getName, verifyNameOwnership, registerRNS } from '../ensService';
+import DataTokenABI from '../abis/DataTokenABI.json';
 import LoginScreen from './LoginScreen';
 import Navbar from './Navbar';
 import ProfilePage from './ProfilePage';
 import SurveyList from './SurveyList';
 import SurveyCreator from './SurveyCreator';
 import SurveyResults from './SurveyResults';
+import TokenMarketplace from './TokenMarketplace';
 import "../styles/SurveyComponent.css";
 
 function SurveyComponent() {
@@ -27,14 +30,53 @@ function SurveyComponent() {
     const [showAllSurveys, setShowAllSurveys] = useState(false);
     const [canAnswerSurveys, setCanAnswerSurveys] = useState(false);
     const [showCredibilityPrompt, setShowCredibilityPrompt] = useState(false);
+    const [dataTokenContract, setDataTokenContract] = useState(null);
+    const [contractError, setContractError] = useState(null);
+
+    const setupDataTokenContract = useCallback(async () => {
+        try {
+            console.log("Setting up DataToken contract...");
+            const provider = new ethers.BrowserProvider(window.ethereum);
+            console.log("Provider created:", provider);
+            const signer = await provider.getSigner();
+            console.log("Signer obtained:", signer);
+            const contractAddress = process.env.REACT_APP_DATA_TOKEN_ADDRESS;
+            
+            console.log("Contract address:", contractAddress);
+            console.log("Signer address:", await signer.getAddress());
+
+            if (!contractAddress) {
+                throw new Error("Contract address is not set in environment variables");
+            }
+
+            const contract = new ethers.Contract(contractAddress, DataTokenABI, signer);
+            console.log("Contract instance created:", contract);
+
+            // Test contract connection
+            try {
+                const name = await contract.name();
+                console.log("Contract name:", name);
+            } catch (error) {
+                console.error("Error calling contract method:", error);
+            }
+
+            setDataTokenContract(contract);
+            setContractError(null);
+            console.log("DataToken contract set up successfully");
+        } catch (error) {
+            console.error("Error setting up DataToken contract:", error);
+            setContractError(error.message);
+        }
+    }, []);
 
     useEffect(() => {
         console.log("Authentication status:", authenticated);
         console.log("User object:", user);
         if (authenticated && user) {
             handleUserAuthentication();
+            setupDataTokenContract();
         }
-    }, [authenticated, user]);
+    }, [authenticated, user, setupDataTokenContract]);
 
     useEffect(() => {
         console.log("showCredibilityPrompt:", showCredibilityPrompt);
@@ -349,6 +391,7 @@ function SurveyComponent() {
                 console.error('Error creating survey:', error);
             } else {
                 console.log('Survey created successfully:', data);
+                await mintDataToken(data[0]); // Mint a DataToken for the new survey
                 await fetchSurveys();
                 setCurrentView('home');
             }
@@ -431,6 +474,151 @@ function SurveyComponent() {
         return userDetails.credibility_score >= 15 || !userDetails.initial_survey_completed;
     };
 
+    const mintDataToken = async (surveyData) => {
+        if (!dataTokenContract) {
+            console.error("DataToken contract not initialized");
+            return;
+        }
+        try {
+            const tx = await dataTokenContract.mint(
+                user.wallet.address,
+                Date.now(), // Using timestamp as tokenId for simplicity
+                surveyData.title,
+                surveyData.description,
+                surveyData.category,
+                surveyData.dataSize,
+                surveyData.datasetHashOrURL
+            );
+            await tx.wait();
+            console.log("DataToken minted successfully");
+        } catch (error) {
+            console.error("Error minting DataToken:", error);
+        }
+    };
+
+    const updateSurveyMetadata = async (tokenId, surveyData) => {
+        if (!dataTokenContract) {
+            console.error("DataToken contract not initialized");
+            return;
+        }
+        try {
+            const tx = await dataTokenContract.updateMetadata(
+                tokenId,
+                surveyData.title,
+                surveyData.description,
+                surveyData.category,
+                surveyData.dataSize,
+                surveyData.datasetHashOrURL
+            );
+            await tx.wait();
+            console.log("Survey metadata updated successfully");
+        } catch (error) {
+            console.error("Error updating survey metadata:", error);
+        }
+    };
+
+    const getSurveyData = async (tokenId) => {
+        if (!dataTokenContract) {
+            console.error("DataToken contract not initialized");
+            return null;
+        }
+        try {
+            const data = await dataTokenContract.getSurveyData(tokenId);
+            return data;
+        } catch (error) {
+            console.error("Error getting survey data:", error);
+            return null;
+        }
+    };
+
+    const handleMintResult = async (result) => {
+        if (!dataTokenContract) {
+            console.error("DataToken contract not initialized");
+            setContractError("DataToken contract not initialized");
+            return;
+        }
+        try {
+            const tokenId = Date.now(); // Using timestamp as tokenId for simplicity
+            console.log("Minting token with ID:", tokenId);
+            console.log("Result data:", result);
+
+            const signer = await dataTokenContract.signer.getAddress();
+            console.log("Signer address:", signer);
+
+            const gasEstimate = await dataTokenContract.mint.estimateGas(
+                signer,
+                tokenId,
+                `Survey Result for Survey ${result.survey_id}`,
+                `Result from ${result.user_wallet_address}`,
+                "Survey Result",
+                JSON.stringify(result.answers).length,
+                JSON.stringify(result)
+            );
+            console.log("Estimated gas:", gasEstimate.toString());
+
+            const tx = await dataTokenContract.mint(
+                signer,
+                tokenId,
+                `Survey Result for Survey ${result.survey_id}`,
+                `Result from ${result.user_wallet_address}`,
+                "Survey Result",
+                JSON.stringify(result.answers).length,
+                JSON.stringify(result)
+            );
+            console.log("Transaction sent:", tx);
+
+            const receipt = await tx.wait();
+            console.log("Transaction confirmed:", receipt);
+
+            console.log("Survey result minted as DataToken successfully");
+        } catch (error) {
+            console.error("Error minting DataToken for survey result:", error);
+            setContractError(error.message);
+        }
+    };
+
+    const grantDataProviderRole = async () => {
+        if (!dataTokenContract) {
+            console.error("DataToken contract not initialized");
+            return;
+        }
+        try {
+            const tx = await dataTokenContract.grantDataProviderRole(user.wallet.address);
+            await tx.wait();
+            console.log("DATA_PROVIDER_ROLE granted successfully");
+        } catch (error) {
+            console.error("Error granting DATA_PROVIDER_ROLE:", error);
+        }
+    };
+
+    const checkAndGrantRole = async () => {
+        if (!dataTokenContract) {
+            console.error("DataToken contract not initialized");
+            return;
+        }
+        try {
+            const signer = await dataTokenContract.signer.getAddress();
+            const hasRole = await dataTokenContract.hasRole(await dataTokenContract.DATA_PROVIDER_ROLE(), signer);
+            if (!hasRole) {
+                console.log("Account doesn't have DATA_PROVIDER_ROLE, attempting to grant...");
+                const tx = await dataTokenContract.grantDataProviderRole(signer);
+                await tx.wait();
+                console.log("DATA_PROVIDER_ROLE granted successfully");
+            } else {
+                console.log("Account already has DATA_PROVIDER_ROLE");
+            }
+        } catch (error) {
+            console.error("Error checking or granting role:", error);
+        }
+    };
+
+    // Call this function after setting up the contract
+    useEffect(() => {
+        if (dataTokenContract) {
+            checkAndGrantRole();
+        }
+    }, [dataTokenContract]);
+
     if (!authenticated) {
         return <LoginScreen />;
     }
@@ -445,6 +633,11 @@ function SurveyComponent() {
                 credibilityScore={credibilityScore}
             />
             <div className="main-content">
+                {contractError && (
+                    <div className="error-message">
+                        Contract Error: {contractError}
+                    </div>
+                )}
                 {showCredibilityPrompt && (
                     <div className="credibility-prompt">
                         <h2>Increase Your Credibility</h2>
@@ -466,6 +659,7 @@ function SurveyComponent() {
                 {currentView === 'home' && (
                     <SurveyList 
                         surveys={availableSurveys}
+                        answeredSurveys={answeredSurveys}  // Pass answeredSurveys here
                         isEnterprise={isEnterprise}
                         onEditSurvey={(survey) => {
                             setCurrentSurvey(survey);
@@ -512,7 +706,19 @@ function SurveyComponent() {
                     <SurveyResults 
                         surveyId={currentSurvey?.id}
                         onBack={() => changeView('home')}
+                        isEnterprise={isEnterprise}
+                        onMintResult={handleMintResult}
+                        dataTokenContract={dataTokenContract}
                     />
+                )}
+                {currentView === 'marketplace' && (
+                    <TokenMarketplace 
+                        dataTokenContract={dataTokenContract}
+                        userAddress={user.wallet.address}
+                    />
+                )}
+                {isEnterprise && (
+                    <button onClick={grantDataProviderRole}>Grant Data Provider Role</button>
                 )}
             </div>
         </div>

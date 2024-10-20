@@ -8,7 +8,7 @@ const mockRNSRegistry = new Map();
 const getProvider = () => {
   try {
     // Try to connect to Mainnet
-    return new ethers.providers.JsonRpcProvider('https://mainnet.infura.io/v3/c7e053b04a7e465388c166c779634866');
+    return new ethers.JsonRpcProvider('https://mainnet.infura.io/v3/c7e053b04a7e465388c166c779634866');
   } catch (error) {
     console.warn('Failed to connect to Mainnet, falling back to mock provider');
     // Return a mock provider
@@ -23,7 +23,7 @@ const getProvider = () => {
 const getRootstockProvider = () => {
   try {
     // Connect to Rootstock testnet
-    return new ethers.providers.JsonRpcProvider('https://rpc.testnet.rootstock.io/eRrAbzc5vDZQzrXYcG0i5j1rvxk3HT-T');
+    return new ethers.JsonRpcProvider('https://rpc.testnet.rootstock.io/eRrAbzc5vDZQzrXYcG0i5j1rvxk3HT-T');
   } catch (error) {
     console.warn('Failed to connect to Rootstock testnet, falling back to mock provider');
     // Return a mock provider
@@ -71,46 +71,44 @@ export async function registerRNS(address, name) {
 }
 
 export async function getName(address) {
-    const ethProvider = getProvider();
-    const rskProvider = getRootstockProvider();
+  const ethProvider = getProvider();
+  const rskProvider = getRootstockProvider();
 
-    try {
-        console.log("Attempting to resolve ENS name for address:", address);
-        // Try to resolve from the actual ENS
-        const ensName = await ethProvider.lookupAddress(address);
-        if (ensName) {
-            console.log(`Retrieved actual ENS name ${ensName} for address ${address}`);
-            return { name: ensName };
-        }
-
-        console.log("Attempting to resolve RNS name for address:", address);
-        // Try to resolve from the actual RNS
-        const rnsName = await rskProvider.lookupAddress(address);
-        if (rnsName) {
-            console.log(`Retrieved actual RNS name ${rnsName} for address ${address}`);
-            return { name: rnsName };
-        }
-    } catch (error) {
-        console.warn('Error looking up actual name, falling back to mock registry:', error);
+  try {
+    // Try to resolve from the actual ENS
+    const ensName = await ethProvider.lookupAddress(address);
+    if (ensName) {
+      console.log(`Retrieved actual ENS name ${ensName} for address ${address}`);
+      return { name: ensName, type: 'ENS' };
     }
 
-    // If not found in actual registries or there was an error, check mock registries
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            const ensName = mockENSRegistry.get(address);
-            const rnsName = mockRNSRegistry.get(address);
-            if (ensName) {
-                console.log(`Retrieved mock ENS name ${ensName} for address ${address}`);
-                resolve({ name: ensName });
-            } else if (rnsName) {
-                console.log(`Retrieved mock RNS name ${rnsName} for address ${address}`);
-                resolve({ name: rnsName });
-            } else {
-                console.log(`No name found for address ${address}`);
-                resolve({ name: null });
-            }
-        }, 500); // Simulate network delay
-    });
+    // Try to resolve from the actual RNS
+    const rnsName = await rskProvider.lookupAddress(address);
+    if (rnsName) {
+      console.log(`Retrieved actual RNS name ${rnsName} for address ${address}`);
+      return { name: rnsName, type: 'RNS' };
+    }
+  } catch (error) {
+    console.warn('Error looking up actual name, falling back to mock registry:', error);
+  }
+
+  // If not found in actual registries or there was an error, check mock registries
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      const ensName = mockENSRegistry.get(address);
+      const rnsName = mockRNSRegistry.get(address);
+      if (ensName) {
+        console.log(`Retrieved mock ENS name ${ensName} for address ${address}`);
+        resolve({ name: ensName, type: 'ENS' });
+      } else if (rnsName) {
+        console.log(`Retrieved mock RNS name ${rnsName} for address ${address}`);
+        resolve({ name: rnsName, type: 'RNS' });
+      } else {
+        console.log(`No name found for address ${address}`);
+        resolve({ name: null, type: null });
+      }
+    }, 500); // Simulate network delay
+  });
 }
 
 export async function isNameAvailable(name) {

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import '../styles/SurveyResults.css';
 
-function SurveyResults({ surveyId, onBack }) {
+function SurveyResults({ surveyId, onBack, isEnterprise, onMintResult, dataTokenContract }) {
     const [results, setResults] = useState([]);
 
     useEffect(() => {
@@ -31,6 +31,12 @@ function SurveyResults({ surveyId, onBack }) {
         return answer.toString();
     };
 
+    const handleMint = async (result) => {
+        if (onMintResult) {
+            await onMintResult(result);
+        }
+    };
+
     return (
         <div className="results-container">
             <h2>Survey Results</h2>
@@ -39,13 +45,18 @@ function SurveyResults({ surveyId, onBack }) {
             ) : (
                 results.map((result, index) => (
                     <div key={index} className="result-card">
-                        <h3>Respondent: {result.ens_name}</h3>
+                        <h3>Respondent: {result.user_wallet_address}</h3>
                         {Object.entries(result.answers).map(([question, answer], i) => (
                             <div key={i} className="answer-item">
                                 <p><strong>Question:</strong> {question}</p>
                                 <p><strong>Answer:</strong> {renderAnswer(answer)}</p>
                             </div>
                         ))}
+                        {isEnterprise && (
+                            <button onClick={() => handleMint(result)} className="mint-button">
+                                Mint Result
+                            </button>
+                        )}
                     </div>
                 ))
             )}

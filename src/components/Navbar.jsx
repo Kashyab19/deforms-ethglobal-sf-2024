@@ -12,12 +12,10 @@ function Navbar({ isEnterprise, userName, logout, setCurrentView, credibilitySco
                 {isEnterprise ? "DeForms Enterprise" : "DeForms"}
             </h1>
             <div className="nav-right">
-                {isEnterprise ? (
-                    <button className="nav-button" onClick={() => setCurrentView('creator')}>Create New Survey</button>
-                ) : (
+                {isEnterprise && (
                     <>
-                        <button className="nav-button" onClick={() => setCurrentView('home')}>Available Surveys</button>
-                        <button className="nav-button" onClick={() => setCurrentView('answered')}>Answered Surveys</button>
+                        <button className="nav-button" onClick={() => setCurrentView('creator')}>Create New Survey</button>
+                        <button className="nav-button" onClick={() => setCurrentView('marketplace')}>Token Marketplace</button>
                     </>
                 )}
                 <div className="credibility-score">
